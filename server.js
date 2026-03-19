@@ -3,13 +3,16 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const app = express();
-app.use(cors()); // Restores the ability for the app to talk to the server
+
+// 1. This line MUST be here to stop the "Connection Error"
+app.use(cors()); 
 app.use(express.json());
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY, 
 });
-// Add this right BEFORE app.post("/chat", ...)
+
+// The "Home" route you just tested
 app.get("/", (req, res) => {
   res.send("EasyFix Server is Running! ✅");
 });
@@ -17,19 +20,21 @@ app.get("/", (req, res) => {
 app.post("/chat", async (req, res) => {
   try {
     const { messages } = req.body;
+    
+    // 2. Check your Render Logs. If this fails, your API Key is likely missing in Render Settings.
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20240620",
       max_tokens: 1000,
-      system: "You are a friendly, patient tech helper for older adults. Ask ONE simple question at a time to diagnose the problem. Use plain English and friendly emojis. Always end with encouragement. 🌟",
+      system: "You are a friendly, patient tech helper for older adults. Ask ONE simple question at a time. Use plain English and emojis. 🌟",
       messages: messages,
     });
-    // This sends the "reply" key the frontend is looking for
+
     res.json({ reply: response.content[0].text });
   } catch (error) {
-    console.error("Backend Error:", error);
-    res.status(500).json({ error: "Failed to connect to AI" });
+    console.error("AI Error:", error);
+    res.status(500).json({ error: "AI failed" });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running`));
