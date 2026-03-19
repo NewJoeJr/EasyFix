@@ -9,38 +9,50 @@ app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-app.get("/", (req, res) => res.send("EasyFix Technical Support: Backend Online ✅"));
+app.get("/", (req, res) => res.send("EasyFix Technical Support: Operational ✅"));
 
 app.post("/chat", async (req, res) => {
   try {
     const { messages } = req.body;
 
-    // Latest stable model as of March 2026 to avoid 404 errors
+    // Use gemini-2.0-flash (Stable for 2026)
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash", 
-      systemInstruction: "You are a professional technical support specialist. Your goal is to diagnose and resolve technology issues. Use direct, clear language. Ask specific diagnostic questions one at a time. Focus on efficient, step-by-step resolution without unnecessary small talk.",
+      model: "gemini-2.0-flash", 
+      systemInstruction: "You are a professional technical support specialist. Diagnose and resolve technology issues efficiently. Use direct, clear language. Ask ONE diagnostic question at a time. Focus on step-by-step resolution.",
     });
 
-    // --- MANDATORY CHAT HISTORY FORMATTING ---
-    // Gemini history must alternate User -> Model. This code ensures that pattern.
-    const history = messages.slice(0, -1).map(m => ({
-      role: (m.role === "bot" || m.role === "assistant" || m.role === "model") ? "model" : "user",
-      parts: [{ text: String(m.text || m.content || "") }],
-    })).filter(m => m.parts[0].text.trim() !== "");
+    // --- THE CHAT FIX: ENSURING ALTERNATING ROLES ---
+    let lastRole = null;
+    const history = [];
 
-    const currentMsg = messages[messages.length - 1];
-    const currentText = String(currentMsg.text || currentMsg.content || "");
+    // We loop through messages and only keep them if they follow the User -> Model pattern
+    messages.slice(0, -1).forEach(m => {
+      const currentRole = (m.role === "bot" || m.role === "assistant" || m.role === "model") ? "model" : "user";
+      
+      // 1. History MUST start with 'user'
+      // 2. Roles MUST alternate (User -> Model -> User)
+      if ((history.length === 0 && currentRole === "user") || (history.length > 0 && currentRole !== lastRole)) {
+        history.push({
+          role: currentRole,
+          parts: [{ text: String(m.text || m.content || " ") }]
+        });
+        lastRole = currentRole;
+      }
+    });
 
-    // Start session and send message
+    const lastMsg = messages[messages.length - 1];
+    const lastText = String(lastMsg.text || lastMsg.content || "Please help.");
+
+    // Start chat with the perfectly cleaned history
     const chat = model.startChat({ history });
-    const result = await chat.sendMessage(currentText);
+    const result = await chat.sendMessage(lastText);
     
     res.json({ reply: result.response.text() });
   } catch (error) {
     console.error("Technical Support Error:", error);
-    res.status(500).json({ error: "System error: The support module encountered an issue." });
+    res.status(500).json({ error: "System error: The support module encountered a processing conflict." });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Technical Support Server running`));
+app.listen(PORT, () => console.log(`Professional Server active on port ${PORT}`));
