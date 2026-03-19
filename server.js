@@ -9,6 +9,10 @@ app.use(express.json());
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY, 
 });
+// Add this right BEFORE app.post("/chat", ...)
+app.get("/", (req, res) => {
+  res.send("EasyFix Server is Running! ✅");
+});
 
 app.post("/chat", async (req, res) => {
   try {
