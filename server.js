@@ -3,30 +3,27 @@ const cors = require("cors");
 const Anthropic = require("@anthropic-ai/sdk");
 
 const app = express();
-app.use(cors()); // Allows your website to talk to this server
+app.use(cors()); 
 app.use(express.json());
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY, // Set this in Render Dashboard
+  apiKey: process.env.ANTHROPIC_API_KEY, 
 });
 
 app.post("/chat", async (req, res) => {
   try {
     const { messages } = req.body;
-
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20240620",
       max_tokens: 1000,
-      // This defines the AI's personality
-      system: "You are a very friendly, patient tech helper for older adults. Your goal is to help them solve tech issues without using jargon. Ask ONE simple question at a time to diagnose the problem. Be encouraging and use friendly emojis. Never make them feel overwhelmed.",
+      system: "You are a very friendly, patient tech helper for older adults. Ask ONE simple question at a time to diagnose the problem. Use plain English, no jargon, and friendly emojis. 🌟",
       messages: messages,
     });
-
-    // Send only the text back to your app
+    // This sends back the "reply" key the frontend is looking for
     res.json({ reply: response.content[0].text });
   } catch (error) {
-    console.error("Server Error:", error);
-    res.status(500).json({ error: "Failed to connect to AI" });
+    console.error("Backend Error:", error);
+    res.status(500).json({ error: "AI Connection Failed" });
   }
 });
 
